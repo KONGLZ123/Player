@@ -87,7 +87,7 @@
       </PrecompiledHeader>
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
-      <PreprocessorDefinitions>WIN32;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>CURL_STATICLIB;WIN32;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <SDLCheck>true</SDLCheck>
       <AdditionalIncludeDirectories>..\lib_curl\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
@@ -151,7 +151,28 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="cache_manager.cc" />
+    <ClCompile Include="file_manager.cc" />
+    <ClCompile Include="global_data.cc" />
+    <ClCompile Include="http_client.cc" />
     <ClCompile Include="main.cc" />
+    <ClCompile Include="media_player.cc" />
+    <ClCompile Include="messager.cc" />
+    <ClCompile Include="mp4_parser.cc" />
+    <ClCompile Include="preload_manager.cc" />
+    <ClCompile Include="program.cc" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="cache_manager.h" />
+    <ClInclude Include="commons.h" />
+    <ClInclude Include="file_manager.h" />
+    <ClInclude Include="global_data.h" />
+    <ClInclude Include="http_client.h" />
+    <ClInclude Include="media_player.h" />
+    <ClInclude Include="messager.h" />
+    <ClInclude Include="mp4_parser.h" />
+    <ClInclude Include="preload_manager.h" />
+    <ClInclude Include="program.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

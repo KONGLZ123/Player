@@ -1,164 +1,215 @@
 #include <iostream>
 #include <string>
+#include <fstream>
+#include <list>
+#include <mutex>
+#include <condition_variable>
+#include <thread>
+#include "http_client.h"
+#include "media_player.h"
+#include "preload_manager.h"
+#include "cache_manager.h"
+#include "messager.h"
+#include "mp4_parser.h"
 
 #pragma warning(disable:4996)
 
-#define CURL_STATICLIB
-#include "curl.h"
-#include "easy.h"
+#define SLEEP(x) (std::this_thread::sleep_for(std::chrono::seconds(x)))
 
-FILE *fp;  //定义FILE类型指针
-           //这个函数是为了符合CURLOPT_WRITEFUNCTION而构造的
-           //完成数据保存功能
-size_t wirtefunc(void *ptr, size_t size, size_t nmemb, void *stream)
+std::list<std::string> g_preload_program_list;
+std::list<std::string> g_playing_program_list;
+bool g_switch = false;
+std::mutex g_mutex;
+std::condition_variable g_cv;
+CacheManager g_cache_manager;
+//FileManager g_file_manager;
+std::string g_string;
+
+
+void PlayerThreadFunc(MediaPlayer* player)
 {
-    return fwrite(ptr, size, nmemb, static_cast<FILE*>(stream));
+	std::cout << "player_thread id:" << std::this_thread::get_id() << std::endl;
+
+	player->Start();
+    auto start = std::chrono::high_resolution_clock::now();
+    SLEEP(10);
+    auto end = std::chrono::high_resolution_clock::now();
+    std::chrono::duration<double, std::milli> elapsed = end - start;
+    std::cout << "Waited " << elapsed.count() << " ms\n";
+
+	player->SwitchNext();
+    SLEEP(5);
+	player->SwitchLast();
+	
+    SLEEP(3);
+	player->SwitchNext();
+    SLEEP(5);
+	player->SwitchNext();
+    SLEEP(5);
+	player->SwitchNext();
+    SLEEP(10);
+	player->SwitchNext();
+	SLEEP(10);
+	player->SwitchNext();
+	SLEEP(10);
+	player->SwitchNext();
+	SLEEP(10);
+	player->SwitchNext();
+	player->End();
+
+	//std::unique_lock<std::mutex> lock(g_mutex);
+	//std::notify_all_at_thread_exit(g_cv, std::move(lock));
+	std::cout << "player_thread quit" << std::endl;
 }
 
-/* 从http头部获取文件size*/
-size_t getcontentlengthfunc(void *ptr, size_t size, size_t nmemb, void *stream) {
-    int r;
-    long len = 0;
-
-    /* _snscanf() is Win32 specific */
-    // r = _snscanf(ptr, size * nmemb, "Content-Length: %ld\n", &len);
-    r = sscanf(static_cast<const char*>(ptr), "Content-Length: %ld\n", &len);
-    if (r) /* Microsoft: we don't read the specs */
-        *((long *)stream) = len;
-
-    return size * nmemb;
-}
-
-int download(CURL *curl, const char * remotepath, const char * localpath,
-    long timeout, long tries)
+void PreloadThreadFunc(PreloadManager* preload)
 {
-    FILE *f;
-    curl_off_t local_file_len = -1;
-    long filesize = 0;
-    struct curl_slist* headers = NULL;
-
-    CURLcode r = CURLE_GOT_NOTHING;
-    int c;
-    struct stat file_info;
-    int use_resume = 0;
-    curl_slist_append(headers, "qyid:123466789");
-
-    /* 得到本地文件大小 */
-    //if(access(localpath,F_OK) ==0)
-
-    if (stat(localpath, &file_info) == 0)
-    {
-        local_file_len = file_info.st_size;
-        use_resume = 1;
-    }
-    //采用追加方式打开文件，便于实现文件断点续传工作
-    fopen_s(&f, localpath, "ab+");
-    if (f == NULL) {
-        perror(NULL);
-        return 0;
-    }
-
-    //curl_easy_setopt(curl, CURLOPT_UPLOAD, 1L);
-
-    curl_easy_setopt(curl, CURLOPT_FORBID_REUSE, 1);
-    //curl_easy_setopt(curl, CURLOPT_BUFFERSIZE, 131072);
-    curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, 0L);
-    curl_easy_setopt(curl, CURLOPT_SSL_VERIFYHOST, 0L);
-    curl_easy_setopt(curl, CURLOPT_NOSIGNAL, 1L);
-    curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L);
-    curl_easy_setopt(curl, CURLOPT_HTTP_CONTENT_DECODING, 1L);
-    curl_easy_setopt(curl, CURLOPT_ACCEPT_ENCODING, "gzip, deflate");
-    curl_easy_setopt(curl, CURLOPT_LOW_SPEED_LIMIT, 1L);
-    curl_easy_setopt(curl, CURLOPT_LOW_SPEED_TIME, 20L);
-    curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
-    curl_easy_setopt(curl, CURLOPT_USERAGENT, "QYPlayer/Windows/4.2.2;NetType/ethernet");
-
-    std::string range_field;
-    range_field = "0-1024000";
-    //if (request.range_end > 0)
-    //    range_field.Format("%" PRIu64"-%" PRIu64, request.range_from, request.range_end);
-    //else
-    //    range_field.Format("%" PRIu64"-", request.range_from);
-    curl_easy_setopt(curl, CURLOPT_RANGE, range_field.c_str());
-
-    curl_easy_setopt(curl, CURLOPT_URL, remotepath);
-
-    curl_easy_setopt(curl, CURLOPT_CONNECTTIMEOUT, timeout);  // 设置连接超时，单位秒
-
-    // 设置文件续传的位置给libcurl
-    curl_easy_setopt(curl, CURLOPT_RESUME_FROM_LARGE, use_resume ? local_file_len : 0);
-
-
-    //设置http 头部处理函数
-    curl_easy_setopt(curl, CURLOPT_HEADERFUNCTION, getcontentlengthfunc);
-    curl_easy_setopt(curl, CURLOPT_HEADERDATA, &filesize);
-
-    curl_easy_setopt(curl, CURLOPT_WRITEDATA, f);
-    curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, wirtefunc);
-
-    //curl_easy_setopt(curl, CURLOPT_READFUNCTION, readfunc);
-    //curl_easy_setopt(curl, CURLOPT_READDATA, f);
-    curl_easy_setopt(curl, CURLOPT_NOPROGRESS, 1L);
-    curl_easy_setopt(curl, CURLOPT_VERBOSE, 1L);
-
-
-    r = curl_easy_perform(curl);
-
-
-    fclose(f);
-    curl_slist_free_all(headers);
-
-    if (r == CURLE_OK)
-        return 1;
-    else {
-        fprintf(stderr, "%s\n", curl_easy_strerror(r));
-        return 0;
-    }
+	preload->PreloadProcess();
+	std::cout << "preload_thread quit" << std::endl;
 }
 
+void HttpThreadFunc(HttpClient* http_client)
+{
+    http_client->Process();
+}
+
+
+#define MAX_WAIT_MSECS 30*1000 /* Wait max. 30 seconds */
+
+static const char *urls[] = {
+    "http://www.microsoft.com",
+    "http://www.baidu.com",
+    "http://www.cn.bing.com",
+    "http://www.iqiyi.com"
+};
+
+#define CNT 4
+
+static size_t cb(char *d, size_t n, size_t l, void *p)
+{
+    /* take care of the data here, ignored in this example */
+    (void)d;
+    (void)p;
+    return n*l;
+}
+
+static void init(CURLM *cm, int i)
+{
+    CURL *eh = curl_easy_init();
+    curl_easy_setopt(eh, CURLOPT_WRITEFUNCTION, cb);
+    curl_easy_setopt(eh, CURLOPT_HEADER, 0L);
+    curl_easy_setopt(eh, CURLOPT_URL, urls[i]);
+    curl_easy_setopt(eh, CURLOPT_PRIVATE, urls[i]);
+    curl_easy_setopt(eh, CURLOPT_VERBOSE, 0L);
+    curl_multi_add_handle(cm, eh);
+}
+
+void func(std::weak_ptr<std::string> str)
+{
+    if (str.lock())
+        std::cout << *str.lock() << std::endl;
+}
 
 int main(int argc, char* argv[])
 {
-    curl_global_init(CURL_GLOBAL_ALL);
-    
-    std::string url = "http://videostream.iqiyi.com/playback/v/0839560d9e904601a7d0324a91056673";
-    std::string filename = url.substr(url.rfind("/") + 1, url.size());
-    //fopen_s(&fp, filename.c_str(), "w");
-    //if (fp == NULL)
-    //{
-    //    //curl_easy_cleanup(curl);
-    //    exit(1);
+	std::cout << "main thread id:" << std::this_thread::get_id() << std::endl;
+
+	//MediaPlayer* player = new MediaPlayer();
+ //   HttpClient* http_client = new HttpClient();
+	//PreloadManager* preload = new PreloadManager(player, http_client);
+ //   FileManager::DeleteCache("E:\\project_code\\CacheManager\\CacheManager\\cache\\*");
+
+	//player->Initialize();
+	//preload->Start();
+
+	//std::thread player_thread(PlayerThreadFunc, player);
+ //   std::thread http_client_thread(HttpThreadFunc, http_client);
+	//std::thread preload_thread(PreloadThreadFunc, preload);
+
+	//player_thread.join();
+	////preload->Stop();
+	////std::unique_lock<std::mutex> lock(g_mutex);
+	////std::notify_all_at_thread_exit(g_cv, std::move(lock));
+ //   http_client_thread.join();
+	//preload_thread.join();
+
+	//delete player;
+	//delete preload;
+ //   delete http_client;
+
+    Mp4Parser mp4_parser;
+    mp4_parser.Parser();
+
+    //CURLM *cm = NULL;
+    //CURL *eh = NULL;
+    //CURLMsg *msg = NULL;
+    //CURLcode return_code = (CURLcode)0;
+    //int still_running = 0, i = 0, msgs_left = 0;
+    //int http_status_code;
+    //const char *szUrl;
+
+    //curl_global_init(CURL_GLOBAL_ALL);
+
+    //cm = curl_multi_init();
+
+    //for (i = 0; i < CNT; ++i) {
+    //    init(cm, i);
     //}
 
-    CURL* curl = curl_easy_init();
-    filename = "E:\\project_code\\CacheManager\\CacheManager\\" + filename;
-    download(curl, url.c_str(), filename.c_str(), 3, 1);
+    ////curl_multi_perform(cm, &still_running);
 
-    //CURL* curl = curl_easy_init();
-    //if (curl)
-    //{
-    //    curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
-    //    //curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
-    //    curl_easy_setopt(curl, CURLOPT_TIMEOUT, 3);
-    //    curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, wirtefunc);
-    //    curl_easy_setopt(curl, CURLOPT_HEADERFUNCTION, getcontentlengthfunc);
-    //    curl_easy_setopt(curl, CURLOPT_HEADERDATA, &filesize);
-    //    curl_easy_setopt(curl, CURLOPT_RESUME_FROM_LARGE, use_resume ? local_file_len : 0);
-    //    curl_easy_setopt(curl, CURLOPT_WRITEDATA, f);
-    //    curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, write_data);
-    //    curl_easy_setopt(curl, CURLOPT_NOPROGRESS, 1L);
-    //    curl_easy_setopt(curl, CURLOPT_VERBOSE, 1L);
-
-    //    CURLcode res_code = curl_easy_perform(curl);
-    //    if (res_code != CURLE_OK)
-    //    {
-    //        std::cout << "request failed!" << std::endl;
+    //do {
+    //    int numfds = 0;
+    //    int res = curl_multi_wait(cm, NULL, 0, MAX_WAIT_MSECS, &numfds);
+    //    if (res != CURLM_OK) {
+    //        fprintf(stderr, "error: curl_multi_wait() returned %d\n", res);
+    //        return EXIT_FAILURE;
     //    }
-    //    curl_easy_cleanup(curl);
-    //}    
-    
-    curl_global_cleanup();
-    //Sleep(3000);
+    //    /*
+    //    if(!numfds) {
+    //    fprintf(stderr, "error: curl_multi_wait() numfds=%d\n", numfds);
+    //    return EXIT_FAILURE;
+    //    }
+    //    */
+    //    curl_multi_perform(cm, &still_running);
+
+    //} while (still_running);
+
+    //while ((msg = curl_multi_info_read(cm, &msgs_left))) {
+    //    if (msg->msg == CURLMSG_DONE) {
+    //        eh = msg->easy_handle;
+
+    //        return_code = msg->data.result;
+    //        if (return_code != CURLE_OK) {
+    //            fprintf(stderr, "CURL error code: %d\n", msg->data.result);
+    //            continue;
+    //        }
+
+    //        // Get HTTP status code
+    //        http_status_code = 0;
+    //        szUrl = NULL;
+
+    //        curl_easy_getinfo(eh, CURLINFO_RESPONSE_CODE, &http_status_code);
+    //        curl_easy_getinfo(eh, CURLINFO_PRIVATE, &szUrl);
+
+    //        if (http_status_code == 200) {
+    //            printf("200 OK for %s\n", szUrl);
+    //        }
+    //        else {
+    //            fprintf(stderr, "GET of %s returned http status code %d\n", szUrl, http_status_code);
+    //        }
+
+    //        curl_multi_remove_handle(cm, eh);
+    //        curl_easy_cleanup(eh);
+    //    }
+    //    else {
+    //        fprintf(stderr, "error: after curl_multi_info_read(), CURLMsg=%d\n", msg->msg);
+    //    }
+    //}
+
+    //curl_multi_cleanup(cm);
+
+    //return EXIT_SUCCESS;
 
     return 0;
 }
