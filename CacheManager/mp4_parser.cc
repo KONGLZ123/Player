@@ -101,7 +101,7 @@ void Mp4Parser::ParserMoov(long sz)
         {
             moov_.mvhd.size = CalcSize((uint8_t*)size);
             strcpy(moov_.mvhd.box_type, box_type);
-            ParserMvhd(moov_.mvhd.size);
+            ParserMvhd(moov_.mvhd);
         }
         else if (strncmp(box_type, "trak", 4) == 0)
         {
@@ -126,9 +126,38 @@ void Mp4Parser::ParserMoov(long sz)
     }
 }
 
-void Mp4Parser::ParserMvhd(long sz)
+void Mp4Parser::ParserMvhd(Mvhd& mvhd)
 {
-    file_.read(moov_.mvhd.bin_data, sz - 8);
+    file_.read(&mvhd.version, 1);
+    file_.read(mvhd.flags, 3);
+    file_.read(mvhd.create_time, 4);
+    file_.read(mvhd.modification_time, 4);
+    file_.read(mvhd.time_scale, 4);
+    file_.read(mvhd.duration, 4);
+    file_.read(mvhd.rate, 4);
+    file_.read(mvhd.volume, 2);
+    file_.read(mvhd.reserved, 10);
+    file_.read(mvhd.matrix, 36);
+    file_.read(mvhd.pre_defined, 24);
+    file_.read(mvhd.next_track_id, 4);
+}
+
+void Mp4Parser::ParserTkhd(Tkhd & tkhd)
+{
+    file_.read(&tkhd.version, 1);
+    file_.read(tkhd.flags, 3);
+    file_.read(tkhd.create_time, 4);
+    file_.read(tkhd.modification_time, 4);
+    file_.read(tkhd.track_id, 4);
+    file_.read(tkhd.reserved, 4);
+    file_.read(tkhd.duration, 4);
+    file_.read(tkhd.reserved2, 8);
+    file_.read(tkhd.layer, 2);
+    file_.read(tkhd.voluem, 2);
+    file_.read(tkhd.reserved3, 2);
+    file_.read(tkhd.matrix, 36);
+    file_.read(tkhd.width, 4);
+    file_.read(tkhd.height, 4);
 }
 
 void Mp4Parser::ParserTrak(Trak& trak)
@@ -148,7 +177,8 @@ void Mp4Parser::ParserTrak(Trak& trak)
         {
             trak.tkhd.size = CalcSize((uint8_t*)size);
             strcpy(trak.tkhd.box_type, box_type);
-            file_.read(trak.tkhd.bin_data, trak.tkhd.size - 8);
+            ParserTkhd(trak.tkhd);
+            //file_.read(trak.tkhd.bin_data, trak.tkhd.size - 8);
         }
         else if (strncmp(box_type, "tref", 4) == 0)
         {
