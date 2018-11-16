@@ -112,7 +112,7 @@ void func(std::weak_ptr<std::string> str)
 
 int main(int argc, char* argv[])
 {
-	std::cout << "main thread id:" << std::this_thread::get_id() << std::endl;
+	//std::cout << "main thread id:" << std::this_thread::get_id() << std::endl;
 
 	//MediaPlayer* player = new MediaPlayer();
  //   HttpClient* http_client = new HttpClient();

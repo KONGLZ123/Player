@@ -309,8 +309,8 @@ void HttpClient::SetOpt(Program* program)
 {
     Request req;
     req.range_from = program->GetFileManager()->GetFileSize();
-    //req.range_end = 1024 * 1024;
-	req.range_end = -1;
+    req.range_end = 1024 * 10;  // 10k
+	//req.range_end = -1;
     req.timeout = 5000;
     req.url = "http://videostream.iqiyi.com/playback/v/" + program->GetKey();
 
