@@ -1,15 +1,7 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
-    <Filter Include="network">
-      <UniqueIdentifier>{6b001436-d2b1-4aa7-a87c-279e1294d89a}</UniqueIdentifier>
-    </Filter>
-  </ItemGroup>
-  <ItemGroup>
     <ClCompile Include="main.cc" />
-    <ClCompile Include="http_client.cc">
-      <Filter>network</Filter>
-    </ClCompile>
     <ClCompile Include="global_data.cc" />
     <ClCompile Include="preload_manager.cc" />
     <ClCompile Include="file_manager.cc" />
@@ -18,11 +10,9 @@
     <ClCompile Include="messager.cc" />
     <ClCompile Include="program.cc" />
     <ClCompile Include="mp4_parser.cc" />
+    <ClCompile Include="http_client.cc" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="http_client.h">
-      <Filter>network</Filter>
-    </ClInclude>
     <ClInclude Include="global_data.h" />
     <ClInclude Include="media_player.h" />
     <ClInclude Include="preload_manager.h" />
@@ -32,5 +22,6 @@
     <ClInclude Include="program.h" />
     <ClInclude Include="commons.h" />
     <ClInclude Include="mp4_parser.h" />
+    <ClInclude Include="http_client.h" />
   </ItemGroup>
 </Project>

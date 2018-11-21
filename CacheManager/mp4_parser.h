@@ -24,8 +24,8 @@ struct Stco
     char box_type[4];
     char version;
     char flags[3];
-    std::list<uint32_t> chunk_offset;
     uint32_t entry_count;
+	std::list<uint32_t> chunk_offset;
 };
 
 struct Ftyp

@@ -9,7 +9,7 @@ Mp4Parser::Mp4Parser() :
     mdat_(nullptr),
     file_size_(0)
 {
-    file_.open("E:\\project_code\\CacheManager\\CacheManager\\cache\\e9ef49324bdb4f239bd03604c8d36952", std::ios::binary | std::ios::in);
+    file_.open("E:\\project_code\\CacheManager\\CacheManager\\0e0e60f6be414f2da587e9cb9edf5266", std::ios::binary | std::ios::in);
     if (file_.is_open())
     {
         file_.seekg(0, std::ios::end);
@@ -40,7 +40,7 @@ void Mp4Parser::Parser()
             if (strncmp(box_type, "ftyp", 4) == 0)
             {
                 ftyp_.size = CalcSize((uint8_t*)size);
-                strcpy(ftyp_.box_type, box_type);
+                strncpy(ftyp_.box_type, box_type, 4);
                 file_.read(ftyp_.major_brand, 4);
                 file_.read(tmp, 4);
                 ftyp_.minor_version = static_cast<int>(tmp[3]);
@@ -49,7 +49,7 @@ void Mp4Parser::Parser()
             else if (strncmp(box_type, "moov", 4) == 0)
             {
                 moov_.size = CalcSize((uint8_t*)size);
-                strcpy(moov_.box_type, box_type);
+                strncpy(moov_.box_type, box_type, 4);
                 ParserMoov(moov_.size);
             }
             // TODO: 需要流式解析，数据可能不完全，解析过程中需要剔除free box
@@ -128,14 +128,14 @@ void Mp4Parser::ParserMoov(long sz)
         if (strncmp(box_type, "mvhd", 4) == 0)
         {
             moov_.mvhd.size = CalcSize((uint8_t*)size);
-            strcpy(moov_.mvhd.box_type, box_type);
+            strncpy(moov_.mvhd.box_type, box_type, 4);
             ParserMvhd(moov_.mvhd);
         }
         else if (strncmp(box_type, "trak", 4) == 0)
         {
             Trak trak;
             trak.size = CalcSize((uint8_t*)size);
-            strcpy(trak.box_type, box_type);
+            strncpy(trak.box_type, box_type, 4);
             ParserTrak(trak);
             moov_.tracks.push_back(trak);
         }
@@ -205,7 +205,7 @@ void Mp4Parser::ParserTrak(Trak& trak)
         if (strncmp(box_type, "tkhd", 4) == 0)
         {
             trak.tkhd.size = CalcSize((uint8_t*)size);
-            strcpy(trak.tkhd.box_type, box_type);
+            strncpy(trak.tkhd.box_type, box_type, 4);
             ParserTkhd(trak.tkhd);
         }
         else if (strncmp(box_type, "tref", 4) == 0)
@@ -217,7 +217,7 @@ void Mp4Parser::ParserTrak(Trak& trak)
         else if (strncmp(box_type, "mdia", 4) == 0)
         {
             trak.mdia.size = CalcSize((uint8_t*)size);
-            strcpy(trak.mdia.box_type, box_type);
+            strncpy(trak.mdia.box_type, box_type, 4);
             ParserMedi(trak.mdia);
         }
         else
@@ -245,20 +245,20 @@ void Mp4Parser::ParserMedi(Mdia& mdia)
         if (strncmp(box_type, "mdhd", 4) == 0)
         {
             mdia.mdhd.size = CalcSize((uint8_t*)size);
-            strcpy(mdia.mdhd.box_type, box_type);
+            strncpy(mdia.mdhd.box_type, box_type, 4);
             ParserMdhd(mdia.mdhd);
             //file_.read(mdia.mdhd.bin_data, mdia.mdhd.size - 8);
         }
         else if (strncmp(box_type, "hdlr", 4) == 0)
         {
             mdia.hdrl.size = CalcSize((uint8_t*)size);
-            strcpy(mdia.hdrl.box_type, box_type);
+            strncpy(mdia.hdrl.box_type, box_type, 4);
             ParserHdrl(mdia.hdrl);
         }
         else if (strncmp(box_type, "minf", 4) == 0)
         {
             mdia.minf.size = CalcSize((uint8_t*)size);
-            strcpy(mdia.minf.box_type, box_type);
+            strncpy(mdia.minf.box_type, box_type, 4);
             ParserMinf(mdia.minf);
         }
         else
@@ -272,7 +272,6 @@ void Mp4Parser::ParserMedi(Mdia& mdia)
 
 void Mp4Parser::ParserMdhd(Mdhd & mdhd)
 {
-
     file_.read(&mdhd.version, 1);
     file_.read(mdhd.flags, 3);
     mdhd.create_time = ReadUInt32();
@@ -319,26 +318,26 @@ void Mp4Parser::ParserMinf(Minf& minf)
         if (strncmp(box_type, "vmhd", 4) == 0)
         {
             minf.vmhd.size = CalcSize((uint8_t*)size);
-            strcpy(minf.vmhd.box_type, box_type);
+            strncpy(minf.vmhd.box_type, box_type, 4);
             //file_.read(minf.vmhd.bin_data, minf.vmhd.size - 8);
             ParserVmhd(minf.vmhd);
         }
         else if (strncmp(box_type, "dinf", 4) == 0)
         {
             minf.dinf.size = CalcSize((uint8_t*)size);
-            strcpy(minf.dinf.box_type, box_type);
+            strncpy(minf.dinf.box_type, box_type, 4);
             ParserDinf(minf.dinf);
         }
         else if (strncmp(box_type, "stbl", 4) == 0)
         {
             minf.stbl.size = CalcSize((uint8_t*)size);
-            strcpy(minf.stbl.box_type, box_type);
+            strncpy(minf.stbl.box_type, box_type, 4);
             ParserStbl(minf.stbl);
         }
         else if (strncmp(box_type, "smhd", 4) == 0)
         {
             minf.vmhd.size = CalcSize((uint8_t*)size);
-            strcpy(minf.vmhd.box_type, box_type);
+            strncpy(minf.vmhd.box_type, box_type, 4);
             ParserVmhd(minf.vmhd);
         }
         else
@@ -390,8 +389,9 @@ void Mp4Parser::ParserStbl(Stbl& stbl)
         else if (strncmp(box_type, "ctts", 4) == 0)
         {
             uint32_t len = CalcSize((uint8_t*)size);
-            char temp[5000];
-            file_.read(temp, len - 8);
+			char* tmp = (char*)malloc(len);
+            file_.read(tmp, len - 8);
+			free(tmp);
         }
         else if (strncmp(box_type, "stss", 4) == 0)
         {
@@ -405,13 +405,13 @@ void Mp4Parser::ParserStbl(Stbl& stbl)
             //char temp[256];
             //file_.read(temp, len - 8);
             stbl.stsc.size = CalcSize((uint8_t*)size);
-            strcpy(stbl.stsc.box_type, box_type);
+            strncpy(stbl.stsc.box_type, box_type, 4);
             ParserStsc(stbl.stsc);
         }
         else if (strncmp(box_type, "stco", 4) == 0)
         {
             stbl.stco.size = CalcSize((uint8_t*)size);
-            strcpy(stbl.stco.box_type, box_type);
+            strncpy(stbl.stco.box_type, box_type, 4);
             ParserStco(stbl.stco);
             //uint32_t len = CalcSize((uint8_t*)size);
             //char temp[256];
@@ -420,8 +420,9 @@ void Mp4Parser::ParserStbl(Stbl& stbl)
         else if (strncmp(box_type, "stsz", 4) == 0)
         {
             uint32_t len = CalcSize((uint8_t*)size);
-            char temp[2560];
-            file_.read(temp, len - 8);
+			char *tmp = (char*)malloc(len);
+            file_.read(tmp, len - 8);
+			free(tmp);
         }
         else
         {
@@ -448,7 +449,7 @@ void Mp4Parser::ParserDinf(Dinf & dinf)
         if (strncmp(box_type, "dref", 4) == 0)
         {
             dinf.dref.size = CalcSize((uint8_t*)size);
-            strcpy(dinf.dref.box_type, box_type);
+            strncpy(dinf.dref.box_type, box_type, 4);
             file_.read(&dinf.version, 1);
             file_.read(dinf.flags, 3);
             file_.read(dinf.entry_count, 4);
@@ -461,7 +462,7 @@ void Mp4Parser::ParserDinf(Dinf & dinf)
             if (strncmp(box_type, "url ", 4) == 0)
             {
                 dinf.dref.url.size = CalcSize((uint8_t*)size);
-                strcpy(dinf.dref.url.box_type, box_type);
+                strncpy(dinf.dref.url.box_type, box_type, 4);
                 file_.read(dinf.dref.url.bin_data, dinf.dref.url.size - 8);
             }
             else
@@ -487,8 +488,11 @@ void Mp4Parser::ParserMdat(Mdat* mdat)
     char tmp[8];
     char free_type[4];
     int off = 0;
-    while (!file_.eof())
+	int finish_pos = 0;
+	while (!file_.eof())
     {
+		finish_pos = file_.tellg();
+
         file_.read(&ch, 1);     // 每次读一个，因为不知道什么时候结束
         tmp[off++] = ch;
         if (off == 7)
@@ -496,7 +500,7 @@ void Mp4Parser::ParserMdat(Mdat* mdat)
             off = 0;
             for (int i = 0; i < 4; ++i)
                 free_type[i] = tmp[4 + i];
-            if (strcmp(free_type, "free") == 0)
+            if (strncmp(free_type, "free", 4) == 0)
             {
                 int size = CalcSize((uint8_t*)tmp);
                 char *f = (char*)malloc(size);
