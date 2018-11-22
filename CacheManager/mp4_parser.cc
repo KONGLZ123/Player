@@ -9,7 +9,7 @@ Mp4Parser::Mp4Parser() :
     mdat_(nullptr),
     file_size_(0)
 {
-    file_.open("E:\\project_code\\CacheManager\\CacheManager\\0e0e60f6be414f2da587e9cb9edf5266", std::ios::binary | std::ios::in);
+    file_.open("E:\\project_code\\Player\\CacheManager\\0e0e60f6be414f2da587e9cb9edf5266", std::ios::binary | std::ios::in);
     if (file_.is_open())
     {
         file_.seekg(0, std::ios::end);
