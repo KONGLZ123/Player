@@ -1,6 +1,7 @@
 #pragma once
 #include <fstream>
 #include <list>
+#include <vector>
 
 struct Stsc
 {
@@ -70,6 +71,24 @@ struct Dref
     Url url;
 };
 
+struct SampleDescription
+{
+    uint32_t size;
+    char data_type[4];
+    char revered[6];
+    uint32_t data_reference_count;
+};
+
+struct Stsd
+{
+    uint32_t size;
+    char box_type[4];
+    char version;
+    char flags[3];
+    uint32_t entry_count;
+    std::vector<SampleDescription> sample_entrys;
+};
+
 struct Dinf
 {
     long size;
@@ -96,9 +115,9 @@ struct Stbl
 {
     long size;
     char box_type[4];
-    //char bin_data[256];
     Stsc stsc;
     Stco stco;
+    Stsd stsd;
     //Co64 co64;
 };
 
@@ -211,6 +230,28 @@ struct Moov
     std::list<Trak> tracks;
 };
 
+struct AvcC
+{
+    uint32_t size;
+    char box_type[4];
+    char version[4];
+    char nal_size;
+    char sps_num;
+    uint16_t sps_size;
+    char* sps_without_start_code;
+    uint16_t pps_num;
+    char pps[5];
+};
+
+struct Btrt
+{
+    uint32_t size;
+    char box_type[4];
+    uint32_t buffer_size_db;
+    uint32_t max_bitrate;
+    uint32_t avg_bitrate;
+};
+
 class Mdat
 {
 public:
@@ -297,6 +338,7 @@ public:
     void ParserMdat(Mdat* mdat);
     void ParserStsc(Stsc& stsc);
     void ParserStco(Stco& stco);
+    void ParserStsd(Stsd& stsd);
 
 private:
     uint32_t file_size_;

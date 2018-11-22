@@ -9,7 +9,7 @@ Mp4Parser::Mp4Parser() :
     mdat_(nullptr),
     file_size_(0)
 {
-    file_.open("E:\\project_code\\Player\\CacheManager\\0e0e60f6be414f2da587e9cb9edf5266", std::ios::binary | std::ios::in);
+    file_.open("E:\\project_code\\Player\\CacheManager\\cache\\10cfe57533654926945b9696cad8f6ed", std::ios::binary | std::ios::in);
     if (file_.is_open())
     {
         file_.seekg(0, std::ios::end);
@@ -43,7 +43,7 @@ void Mp4Parser::Parser()
                 strncpy(ftyp_.box_type, box_type, 4);
                 file_.read(ftyp_.major_brand, 4);
                 file_.read(tmp, 4);
-                ftyp_.minor_version = static_cast<int>(tmp[3]);
+                ftyp_.minor_version = CalcSize((uint8_t*)tmp);
                 file_.read(ftyp_.compatible_brands, ftyp_.size - 16);
             }
             else if (strncmp(box_type, "moov", 4) == 0)
@@ -79,7 +79,7 @@ void Mp4Parser::Parser()
         }
     }
 
-    std::cout << "main thread quit" << std::endl;
+    std::cout << "parser finish" << std::endl;
 }
 
 uint32_t Mp4Parser::CalcSize(uint8_t size[])
@@ -364,9 +364,11 @@ void Mp4Parser::ParserStbl(Stbl& stbl)
         file_.read(box_type, 4);
         if (strncmp(box_type, "stsd", 4) == 0)
         {
-            uint32_t len = CalcSize((uint8_t*)size);
-            char temp[256];
-            file_.read(temp, len - 8);
+            stbl.stsd.size = CalcSize((uint8_t*)size);
+            strncpy(stbl.stsd.box_type, box_type, 4);
+            ParserStsd(stbl.stsd);
+            //char temp[256];
+            //file_.read(temp, len - 8);
         }
         else if (strncmp(box_type, "avc1", 4) == 0)
         {
@@ -489,6 +491,7 @@ void Mp4Parser::ParserMdat(Mdat* mdat)
     char free_type[4];
     int off = 0;
 	int finish_pos = 0;
+
 	while (!file_.eof())
     {
 		finish_pos = file_.tellg();
@@ -544,6 +547,48 @@ void Mp4Parser::ParserStco(Stco & stco)
     {
         uint32_t off = ReadUInt32();
         stco.chunk_offset.push_back(off);
+    }
+}
+
+void Mp4Parser::ParserStsd(Stsd & stsd)
+{
+    file_.read(&stsd.version, 1);
+    file_.read(stsd.flags, 3);
+    stsd.entry_count = ReadUInt32();
+    AvcC avcc;  //avcC
+    Btrt btrt;  //btrt
+    for (int i = 0; i < stsd.entry_count; ++i)
+    {
+        SampleDescription sd;
+        //avc1
+        sd.size = ReadUInt32();
+        file_.read(sd.data_type, 4);
+        file_.read(sd.revered, 6);
+        sd.data_reference_count = ReadUInt16();
+        char temp[256];
+        file_.read(temp, 70);
+        stsd.sample_entrys.push_back(sd);
+
+        //avcC
+        avcc.size = ReadUInt32();
+        file_.read(avcc.box_type, 4);
+        file_.read(avcc.version, 4);
+        file_.read(&avcc.nal_size, 1);
+        avcc.nal_size &= 0x00000011;
+        file_.read(&avcc.sps_num, 1);
+        avcc.sps_num &= 0x00011111;
+        avcc.sps_size = ReadUInt16();
+        avcc.sps_without_start_code = (char*)malloc(avcc.sps_size);
+        file_.read(avcc.sps_without_start_code, avcc.sps_size);
+        avcc.pps_num = ReadUInt16();
+        file_.read(avcc.pps, 5);
+
+        //btrt
+        btrt.size = ReadUInt32();
+        file_.read(btrt.box_type, 4); 
+        btrt.buffer_size_db = ReadUInt32();
+        btrt.max_bitrate = ReadUInt32();
+        btrt.avg_bitrate = ReadUInt32();
     }
 }
 
